@@ -61,12 +61,12 @@ void KMEpoll::runEpoll()
 
     while(m_running)
     {
-        int evtRet = epoll_wait(m_epollFd, m_epollEvts, MAX_EPOLL_EVENTS, 100);
+        int evtRet = epoll_wait(m_epollFd, m_epollEvts, MAX_EPOLL_EVENTS, 500);
         if(evtRet == -1)
         {
             if(evtRet != EAGAIN && evtRet != EINTR)
             {
-                KMLogger::getInstance()->getLogFunc() << "KMEpoll::runEpoll wait err=" << evtRet 
+                KMLogger::getInstance()->log() << "KMEpoll::runEpoll wait err=" << evtRet 
                     << " errMsg=" << strerror(evtRet) << std::endl;
             }
             continue;
@@ -79,13 +79,14 @@ void KMEpoll::runEpoll()
 
             try
             {
-                pDataHolder->epollablePtr->onEpollEvents(curEvt.events, KMEpollUtils::getNowMs());
+                pDataHolder->isTriggeredEvent = true;
+                pDataHolder->epollablePtr->onEpollEvents(curEvt.events);
             }
             catch(std::exception& ex)
             {
-                KMLogger::getInstance()->getLogFunc() << "KMEpoll::runEpoll onEpollEvents exception=" 
+                KMLogger::getInstance()->log() << "KMEpoll::runEpoll onEpollEvents exception=" 
                     << ex.what() << " epollableFd=" << pDataHolder->epollablePtr->getEpollableFd() << std::endl;
-                pDataHolder->epollablePtr->setDestroying(true);
+                pDataHolder->epollablePtr->setCanDestroy(true);
             }
         }
 
@@ -94,17 +95,23 @@ void KMEpoll::runEpoll()
             )
         {
             EpollEvtDataHolder* pHolder = (*itData);
-            pHolder->epollablePtr->onEpollEvents(0, KMEpollUtils::getNowMs());
-
-            if(pHolder->epollablePtr->isDestroying())
+            if(pHolder->epollablePtr->checkTimeOut(KMEpollUtils::getNowMs()))
+            {
+                KMLogger::getInstance()->log() << "KMEpoll socket timeout" << std::endl;
+                pHolder->epollablePtr->setCanDestroy(true);
+            }
+            
+            if(pHolder->epollablePtr->canDestroy())
             {
                 setEpollCtrl(pHolder->epollablePtr, EPOLL_CTL_DEL, 0, NULL);
 
                 itData = m_epollDataSet.erase(itData);
                 delete pHolder;
             }
-            else
+            else if(pHolder->isTriggeredEvent)
             {
+                pHolder->isTriggeredEvent = false;
+
                 uint32_t waitEvts = 0;
                 waitEvts |= (pHolder->epollablePtr->isWaitingReadEvent() ? EPOLLIN : 0);
                 waitEvts |= (pHolder->epollablePtr->isWaitingWriteEvent() ? EPOLLOUT : 0);
@@ -118,6 +125,11 @@ void KMEpoll::runEpoll()
 
                 itData++;
             }
+            else
+            {
+                itData++;
+            }
+            
         }
     }
 }

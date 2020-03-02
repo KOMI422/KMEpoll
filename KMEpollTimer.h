@@ -27,10 +27,11 @@ public:
     KMEpollTimer();
     virtual ~KMEpollTimer();
 
-    virtual void onEpollEvents(uint32_t evts, uint32_t timerMs);
+    virtual void onEpollEvents(uint32_t evts);
     virtual int32_t getEpollableFd() const { return m_timerFd; }
     virtual bool isWaitingReadEvent() const { return (m_timerContexts.size() > 0); }
     virtual bool isWaitingWriteEvent() const { return false; }
+    virtual bool checkTimeOut(uint64_t nowMs) { return false; }
 
     void closeTimer();
     EpollTimerContext_Ptr addTimerCallback(uint32_t intervalMs, EpollTimerCb cb);

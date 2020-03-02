@@ -23,22 +23,23 @@ public:
     static bool isWritable(uint32_t evts);
     static bool isError(uint32_t evts, int32_t& errNo);
 public:
-    KMEpollable() : m_isEdgeTrigger(false), m_isDestroying(false) {}
+    KMEpollable() : m_isEdgeTrigger(false), m_canDestroy(false) {}
     virtual ~KMEpollable() {}
 
     void setEdgeTrigger(bool et) { m_isEdgeTrigger = et; }
     bool isEdgeTrigger() const { return m_isEdgeTrigger; }
 
-    void setDestroying(bool val) { m_isDestroying = val; }
-    bool isDestroying() const { return m_isDestroying; };
+    void setCanDestroy(bool val) { m_canDestroy = val; }
+    bool canDestroy() const { return m_canDestroy; };
 public:
-    virtual void onEpollEvents(uint32_t evts, uint32_t timerMs) = 0;
+    virtual void onEpollEvents(uint32_t evts) = 0;
     virtual int32_t getEpollableFd() const = 0;
     virtual bool isWaitingReadEvent() const = 0;
     virtual bool isWaitingWriteEvent() const = 0;
+    virtual bool checkTimeOut(uint64_t nowMs) = 0;
 private:
     bool m_isEdgeTrigger;
-    bool m_isDestroying;
+    bool m_canDestroy;
 };
 
 class KMEpoll
@@ -63,9 +64,10 @@ private:
     struct EpollEvtDataHolder
     {
         uint32_t registeredEvts;
+        bool isTriggeredEvent;
         std::shared_ptr<KMEpollable> epollablePtr;
 
-        EpollEvtDataHolder() : registeredEvts(0) {}
+        EpollEvtDataHolder() : registeredEvts(0), isTriggeredEvent(false) {}
     };
     std::set<EpollEvtDataHolder*> m_epollDataSet;
 };

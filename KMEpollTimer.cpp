@@ -30,7 +30,7 @@ KMEpollTimer::~KMEpollTimer()
     }
 }
 
-void KMEpollTimer::onEpollEvents(uint32_t evts, uint32_t timerMs)
+void KMEpollTimer::onEpollEvents(uint32_t evts)
 {
     int32_t errNo = 0;
     if (KMEpollable::isError(evts, errNo))

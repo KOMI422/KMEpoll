@@ -12,7 +12,7 @@ KMLogger* KMLogger::getInstance()
     return m_pInstance;
 }
 
-std::ostream& KMLogger::getLogFunc()
+std::ostream& KMLogger::log()
 {
     return std::cout;
 }

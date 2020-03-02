@@ -4,6 +4,7 @@
 #include "KMEpollSocketIPPort.h"
 #include <memory>
 #include <functional>
+#include "KMEpollUtils.h"
 
 namespace KM
 {
@@ -23,16 +24,18 @@ public:
     {
         INITIATIVE_CLOSED = 0,
         PASSIVE_CLOSED = 1,
-        ERRONEOUS_CLOSED = 2
+        ERROR_CLOSED = 2,
+        TIMEOUT_CLOSED = 3,
     };
     typedef std::function<void(std::shared_ptr<KMEpollTCPSocket> pSocket, TCPSocketClosedReason reason)> SocketClosedCb;
 public:
     KMEpollTCPSocket(bool isListener, TCPSocketFamily sockType = IPv4_Socket);
     virtual ~KMEpollTCPSocket();
-    virtual void onEpollEvents(uint32_t evts, uint32_t timerMs);
+    virtual void onEpollEvents(uint32_t evts);
     virtual int32_t getEpollableFd() const { return m_tcpFd; }
     virtual bool isWaitingReadEvent() const;
     virtual bool isWaitingWriteEvent() const;
+    virtual bool checkTimeOut(uint64_t nowMs);
 
     void setNonBlock(bool nonblock);
     void listen(const std::string& ip, uint16_t port);
@@ -48,12 +51,10 @@ public:
     void setSocketAcceptCallback(SocketAcceptCb cb) { m_socketAcceptCb = cb; }
     void setSocketDataCallback(SocketDataCb cb) { m_socketDataCb = cb; }
     void setSocketClosedCallback(SocketClosedCb cb) { m_socketClosedCb = cb; }
-    bool isSocketTimeOut() const;
+    void setTimeOut(uint64_t timeoutInterval) { m_socketTimeoutChecker.setInterval(timeoutInterval); }
 private:
     void handleListenerSocketEvents(uint32_t evts);
     void handleClientSocketEvents(uint32_t evts);
-    void setSocketTimeOut(uint32_t intervalMs);
-    void checkSocketTimeOut(uint32_t nowMs);
 private:
     const uint32_t MAX_BACKLOG;
     const bool m_isListener;
@@ -63,6 +64,7 @@ private:
     std::shared_ptr<KMEpollSocketIPPort> m_socketIpPort;
     bool m_isConnected;
     uint64_t m_socketTimeOutTime;
+    KMTimeChecker<uint64_t> m_socketTimeoutChecker;
 
     std::string m_recvBuffer;
     std::string m_sendBuffer;
@@ -71,5 +73,7 @@ private:
     SocketDataCb m_socketDataCb;
     SocketClosedCb m_socketClosedCb;
 };
+
+typedef std::shared_ptr<KMEpollTCPSocket> KMEpollTCPSocket_Ptr;
 
 };

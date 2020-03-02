@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include "KMEpollUtils.h"
+#include "KMLogger.h"
 
 using namespace KM;
 
@@ -26,7 +27,7 @@ KMEpollTCPSocket::~KMEpollTCPSocket()
     }
 }
 
-void KMEpollTCPSocket::onEpollEvents(uint32_t evts, uint32_t timerMs)
+void KMEpollTCPSocket::onEpollEvents(uint32_t evts)
 {
     if(m_isListener)
     {
@@ -34,15 +35,7 @@ void KMEpollTCPSocket::onEpollEvents(uint32_t evts, uint32_t timerMs)
     }
     else
     {
-        if(evts == 0)   //Timer
-        {
-            checkSocketTimeOut(timerMs);
-        }
-        else
-        {
-            handleClientSocketEvents(evts);
-        }
-        
+        handleClientSocketEvents(evts);
     }
     
 }
@@ -55,6 +48,18 @@ bool KMEpollTCPSocket::isWaitingReadEvent() const
 bool KMEpollTCPSocket::isWaitingWriteEvent() const
 {
     return (m_sendBuffer.size() > 0);
+}
+
+bool KMEpollTCPSocket::checkTimeOut(uint64_t nowMs)
+{
+    bool ret = m_socketTimeoutChecker.timeCheck(nowMs);
+
+    if(ret && m_socketClosedCb)
+    {
+        m_socketClosedCb(shared_from_this(), TIMEOUT_CLOSED);
+    }
+
+    return ret;
 }
 
 void KMEpollTCPSocket::setNonBlock(bool nonblock)
@@ -180,7 +185,7 @@ void KMEpollTCPSocket::closeSocket()
     ::close(m_tcpFd);
     m_tcpFd = -1;
     m_isConnected = false;
-    setSocketTimeOut(1000);
+    setCanDestroy(true);
 }
 
 void KMEpollTCPSocket::handleListenerSocketEvents(uint32_t evts)
@@ -190,6 +195,7 @@ void KMEpollTCPSocket::handleListenerSocketEvents(uint32_t evts)
         std::shared_ptr<KMEpollTCPSocket> pNewSocket = this->accept();
         if(pNewSocket)
         {
+            pNewSocket->setNonBlock(true);
             m_socketAcceptCb(pNewSocket);
         }
     }
@@ -246,7 +252,7 @@ void KMEpollTCPSocket::handleClientSocketEvents(uint32_t evts)
     catch(KMEpollException& ex)
     {
         shouldCloseSocket = true;
-        reason = ERRONEOUS_CLOSED;
+        reason = ERROR_CLOSED;
     }
 
     if(shouldCloseSocket && m_socketClosedCb)
@@ -254,20 +260,4 @@ void KMEpollTCPSocket::handleClientSocketEvents(uint32_t evts)
         m_socketClosedCb(shared_from_this(), reason);
         closeSocket();
     }
-}
-
-bool KMEpollTCPSocket::isSocketTimeOut() const
-{
-    return (!m_isConnected && m_socketTimeOutTime > 0 && KMEpollUtils::getNowMs() >= m_socketTimeOutTime);
-}
-
-void KMEpollTCPSocket::setSocketTimeOut(uint32_t intervalMs)
-{
-    m_socketTimeOutTime = (intervalMs == 0) ? 0 : (intervalMs + KMEpollUtils::getNowMs());
-}
-
-void KMEpollTCPSocket::checkSocketTimeOut(uint32_t nowMs)
-{
-    if(isSocketTimeOut())
-        setDestroying(true);
 }
