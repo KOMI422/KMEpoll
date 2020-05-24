@@ -16,3 +16,8 @@ std::ostream& KMLogger::log()
 {
     return std::cout;
 }
+
+std::ostream& KMLogger::debug()
+{
+    return std::cout;
+}

@@ -17,13 +17,20 @@ KMEpollTCPSocket::KMEpollTCPSocket(bool isListener, TCPSocketFamily sockType)
     m_isNonBlock = true;
     m_isConnected = isListener;
     m_socketTimeOutTime = 0;
+
+    FUNC_LOG() << " fd=" << m_tcpFd << " listener=" << isListener 
+        << " sockType=" << sockType << std::endl;
 }
 
 KMEpollTCPSocket::~KMEpollTCPSocket()
 {
+    FUNC_LOG() << " fd=" << m_tcpFd << " isListener=" << m_isListener
+        << " sockType=" << m_socketFamily << std::endl;
+
     if(m_tcpFd != -1)
     {
         close(m_tcpFd);
+        m_tcpFd = -1;
     }
 }
 
@@ -185,7 +192,7 @@ void KMEpollTCPSocket::closeSocket()
     ::close(m_tcpFd);
     m_tcpFd = -1;
     m_isConnected = false;
-    setCanDestroy(true);
+    setEnable(false);
 }
 
 void KMEpollTCPSocket::handleListenerSocketEvents(uint32_t evts)
@@ -208,6 +215,14 @@ void KMEpollTCPSocket::handleClientSocketEvents(uint32_t evts)
     
     try
     {
+        if(!m_isConnected && (isReadable(evts) || isWritable(evts)))
+        {
+            m_isConnected = true;
+            if(m_socketConnectedCb)
+                m_socketConnectedCb(shared_from_this());
+            return;
+        }
+
         if (!shouldCloseSocket && isReadable(evts))
         {
             char buf[512 * 1024] = {0};
@@ -259,5 +274,7 @@ void KMEpollTCPSocket::handleClientSocketEvents(uint32_t evts)
     {
         m_socketClosedCb(shared_from_this(), reason);
         closeSocket();
+
+        setEnable(false);
     }
 }

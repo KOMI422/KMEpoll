@@ -40,13 +40,24 @@ public:
 #include "KMHttpConnection.h"
 int main(int argc, char* argv[])
 {
-    std::string url = "https://www.baidu.com:80/index.jsp?param=test#tag";
-    KMHttpUrl httpUrl;
-    httpUrl.parseUrl(url);
-    std::cout << "schema=" << httpUrl.getSchema() << " host=" << httpUrl.getHost() << " port=" << httpUrl.getPort()
-        << " path=" << httpUrl.getRelativePath() << " query=" << httpUrl.getQueryString() << std::endl;
+    // std::string url = "https://www.baidu.com:80/index.jsp?param=test#tag";
+    // KMHttpUrl httpUrl;
+    // httpUrl.parseUrl(url);
+    // std::cout << "schema=" << httpUrl.getSchema() << " host=" << httpUrl.getHost() << " port=" << httpUrl.getPort()
+    //     << " path=" << httpUrl.getRelativePath() << " query=" << httpUrl.getQueryString() << std::endl;
+
+    // return 0;
+
+    KMEpoll epoller;
+
+    std::shared_ptr<KMHttpConnection> pConn = std::make_shared<KMHttpConnection>();
+    pConn->connectUrl("http://www.baidu.com");
+
+    epoller.registerEpollable(pConn->getSocket());
+    epoller.runEpoll();
 
     return 0;
+
     SimpleServer svr;
 
     std::shared_ptr<KMEpollTCPSocket> pListener = std::make_shared<KMEpollTCPSocket>(true);

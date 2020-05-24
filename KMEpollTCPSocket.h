@@ -18,6 +18,7 @@ public:
         IPv6_Socket = KMEpollSocketIPPort::IPv6
     };
     typedef std::function<void(std::shared_ptr<KMEpollTCPSocket> pSocket)> SocketAcceptCb;
+    typedef std::function<void(std::shared_ptr<KMEpollTCPSocket> pSocket)> SocketConnectedCb;
     typedef std::function<int32_t(std::shared_ptr<KMEpollTCPSocket> pSocket, const char* data, uint32_t len)> SocketDataCb;
 
     enum TCPSocketClosedReason
@@ -49,6 +50,7 @@ public:
     const std::shared_ptr<KMEpollSocketIPPort>& getSocketIPPort() const { return m_socketIpPort; }
 
     void setSocketAcceptCallback(SocketAcceptCb cb) { m_socketAcceptCb = cb; }
+    void setSocketConnectedCallback(SocketConnectedCb cb) { m_socketConnectedCb = cb; }
     void setSocketDataCallback(SocketDataCb cb) { m_socketDataCb = cb; }
     void setSocketClosedCallback(SocketClosedCb cb) { m_socketClosedCb = cb; }
     void setTimeOut(uint64_t timeoutInterval) { m_socketTimeoutChecker.setInterval(timeoutInterval); }
@@ -70,6 +72,7 @@ private:
     std::string m_sendBuffer;
 
     SocketAcceptCb m_socketAcceptCb;
+    SocketConnectedCb m_socketConnectedCb;
     SocketDataCb m_socketDataCb;
     SocketClosedCb m_socketClosedCb;
 };

@@ -43,4 +43,6 @@ private:
     uint16_t m_port;
 };
 
+typedef std::shared_ptr<KMEpollSocketIPPort> KMEpollSocketIPPort_Ptr;
+
 };

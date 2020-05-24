@@ -5,6 +5,11 @@
 #include "KMEpoll.h"
 #include <map>
 
+extern "C"
+{
+    #include "http_parser.h"
+}
+
 namespace KM
 {
 
@@ -46,12 +51,27 @@ private:
 class KMHttpConnection
 {
 public:
+    typedef std::function<void(const char* data, int32_t len)> HttpDataCallback;
+    typedef std::function<void()> HttpConnectionClosedCallback;
+public:
     KMHttpConnection();
+    virtual ~KMHttpConnection();
 
-    bool connectUrl(const std::string& url);
+    bool connectUrl(const std::string& url, bool nonBlock = true);
+    KMEpollTCPSocket_Ptr getSocket() { return m_connSocket; }
+
+    int32_t readData(void* buf, int32_t len);
+    int32_t writeData(const void* buf, int32_t len);
+private:
+    static int onHttpParserData(http_parser* pParser, const char * data, size_t len);
+private:
+    void initHttpParser();
 private:
     KMEpollTCPSocket_Ptr m_connSocket;
     KMHttpUrl m_httpUrl;
+
+    http_parser* m_pHttpParser;
+    http_parser_settings m_httpParserSetting;
 };
 
 };

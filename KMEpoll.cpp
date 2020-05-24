@@ -79,14 +79,14 @@ void KMEpoll::runEpoll()
 
             try
             {
-                pDataHolder->isTriggeredEvent = true;
+                pDataHolder->shouldCheckEventChanged = true;
                 pDataHolder->epollablePtr->onEpollEvents(curEvt.events);
             }
             catch(std::exception& ex)
             {
                 KMLogger::getInstance()->log() << "KMEpoll::runEpoll onEpollEvents exception=" 
                     << ex.what() << " epollableFd=" << pDataHolder->epollablePtr->getEpollableFd() << std::endl;
-                pDataHolder->epollablePtr->setCanDestroy(true);
+                pDataHolder->epollablePtr->setEnable(false);
             }
         }
 
@@ -95,22 +95,18 @@ void KMEpoll::runEpoll()
             )
         {
             EpollEvtDataHolder* pHolder = (*itData);
-            if(pHolder->epollablePtr->checkTimeOut(KMEpollUtils::getNowMs()))
-            {
-                KMLogger::getInstance()->log() << "KMEpoll socket timeout" << std::endl;
-                pHolder->epollablePtr->setCanDestroy(true);
-            }
             
-            if(pHolder->epollablePtr->canDestroy())
+            if(!pHolder->epollablePtr->isEnable())
             {
                 setEpollCtrl(pHolder->epollablePtr, EPOLL_CTL_DEL, 0, NULL);
 
                 itData = m_epollDataSet.erase(itData);
+                pHolder->epollablePtr.reset();
                 delete pHolder;
             }
-            else if(pHolder->isTriggeredEvent)
+            else if(pHolder->shouldCheckEventChanged)
             {
-                pHolder->isTriggeredEvent = false;
+                pHolder->shouldCheckEventChanged = false;
 
                 uint32_t waitEvts = 0;
                 waitEvts |= (pHolder->epollablePtr->isWaitingReadEvent() ? EPOLLIN : 0);
