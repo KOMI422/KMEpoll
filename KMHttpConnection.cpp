@@ -90,6 +90,14 @@ bool KMHttpConnection::connectUrl(const std::string& url, bool nonBlock)
     return true;
 }
 
+void KMHttpConnection::closeConnection()
+{
+    if(m_connSocket)
+    {
+        m_connSocket->closeSocket();
+    }
+}
+
 int32_t KMHttpConnection::readData(void* buf, int32_t len)
 {
     return m_connSocket->recv(buf, len);

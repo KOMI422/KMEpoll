@@ -59,6 +59,7 @@ public:
 
     bool connectUrl(const std::string& url, bool nonBlock = true);
     KMEpollTCPSocket_Ptr getSocket() { return m_connSocket; }
+    void closeConnection();
 
     int32_t readData(void* buf, int32_t len);
     int32_t writeData(const void* buf, int32_t len);
